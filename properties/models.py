@@ -1,14 +1,5 @@
 from django.db import models
 
-class HotelContent(models.Model):
-    hotel = models.ForeignKey('Hotel', on_delete=models.CASCADE)
-    property_id = models.IntegerField()
-    title = models.CharField()
-    description = models.TextField()
-
-    def __str__(self):
-        return f"Content for {self.hotel.hotel_name}"
-
 class HotelSummary(models.Model):
     hotel = models.ForeignKey('Hotel', on_delete=models.CASCADE)
     property_id = models.IntegerField()
@@ -39,6 +30,7 @@ class Hotel(models.Model):
     room_type = models.CharField(max_length=255, null=True)
     lat = models.FloatField(null=True)
     lng = models.FloatField(null=True)
+    description = models.TextField(null=True, blank=True)
 
     class Meta:
         managed = False  # Since this table already exists

@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 import requests
 import json
 import time
-from properties.models import Hotel, HotelContent, HotelSummary, HotelReview
+from properties.models import Hotel, HotelSummary, HotelReview
 
 class Command(BaseCommand):
     help = 'Process hotel data using Ollama'
@@ -59,8 +59,8 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.SUCCESS(f"{self.MODEL_NAME} model is already available!"))
 
-        # Get all hotels
-        hotels = Hotel.objects.all()
+        # Get first 10 hotels
+        hotels = Hotel.objects.order_by('id')[:10] 
         total_hotels = hotels.count()
         
         self.stdout.write(f"Processing {total_hotels} hotels...")
@@ -98,44 +98,21 @@ class Command(BaseCommand):
             Room Type: {hotel.room_type}
             Location: Lat {hotel.lat}, Lng {hotel.lng}
             """
-
-            # Generate title from hotel name
-            title_prompt = f"Create a title using this hotel name and just give one line: {hotel.hotel_name}"
-            title = self.generate_ollama_content(title_prompt).strip()
-
-            # Generate description from other details
-            desc_prompt = f"Generate a detailed hotel description at least two lines about these details:\n{hotel_info}"
-            description = self.generate_ollama_content(desc_prompt).strip()
-            print("Generated description:", repr(description)) 
-            # Update or create content
-            formatted_description = description.replace('\n', ' ')
-            HotelContent.objects.update_or_create(
-                hotel=hotel,
-                defaults={
-                    'title': title,
-                    'description': formatted_description ,
-                    'property_id': hotel.hotel_id
-                }
-            )
-            self.stdout.write(self.style.SUCCESS("Title and description generated successfully"))
-            # Generate summary
             self.stdout.write("Generating summary...")
-            summary_prompt = f"Generate a concise summary of this hotel's key features:\n{hotel_info}"
+            summary_prompt = f"Generate a concise summary of this hotel's key features based on this hotel info and don't use any stars anywhere:\n{hotel_info}"
             summary_response = self.generate_ollama_content(summary_prompt)
             
             if summary_response:
-                HotelSummary.objects.update_or_create(
+                HotelSummary.objects.create(
                     hotel=hotel,
-                    defaults={
-                        'summary': summary_response,
-                        'property_id': hotel.hotel_id
-                    }
+                    summary=summary_response,
+                    property_id=hotel.hotel_id
                 )
                 self.stdout.write(self.style.SUCCESS("Summary generated successfully"))
 
             # Generate review and rating
             self.stdout.write("Generating review and rating...")
-            review_prompt = f"Based on this hotel information, generate a detailed review and suggest a rating out of 5:\n{hotel_info}"
+            review_prompt = f"Based on this hotel information, generate a detailed review and suggest a rating out of 5 and don't use stars anywhere:\n{hotel_info}"
             review_response = self.generate_ollama_content(review_prompt)
             
             if review_response:
@@ -144,15 +121,32 @@ class Command(BaseCommand):
                 except:
                     rating = 4.0  # Default rating if parsing fails
                     
-                HotelReview.objects.update_or_create(
+                HotelReview.objects.create(
                     hotel=hotel,
-                    defaults={
-                        'rating': rating,
-                        'review': review_response,
-                        'property_id': hotel.hotel_id
-                    }
+                    rating=rating,
+                    review=review_response,
+                    property_id=hotel.hotel_id
                 )
-                self.stdout.write(self.style.SUCCESS("Review and rating generated successfully"))
 
+                self.stdout.write(self.style.SUCCESS("Review and rating generated successfully"))
+            
+            self.stdout.write("Generating title...")
+            title_prompt = f"Create a title using this hotel name and just give one line and don't use quotation mark, just a single line: {hotel.hotel_name}"
+            title = self.generate_ollama_content(title_prompt).strip()
+            
+            # Update the hotels table directly
+            if title:
+                hotel.hotel_name = title
+                hotel.save(update_fields=["hotel_name"])
+                self.stdout.write(self.style.SUCCESS(f"Updated hotel {hotel.id}: {title}"))
+
+            self.stdout.write("Generating hotel description...")
+            description_prompt = f"Generate a detailed hotel description at least two lines about these details in a paragraph and don't use any stars or quotation marks anywhere:\n{hotel_info}"
+            description_response = self.generate_ollama_content(description_prompt).strip()
+            
+            if description_response:
+                hotel.description = description_response
+                hotel.save(update_fields=["description"])
+                self.stdout.write(self.style.SUCCESS("Description generated and saved successfully"))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error processing hotel {hotel.hotel_name}: {str(e)}"))
