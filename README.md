@@ -131,7 +131,7 @@ docker-compose exec ollama ollama pull llama3.2
 
 ### Generate Property Title, Description, Summaries, Ratings and Reviews
 
-Use the following command to re-write property titles and descriptions using Ollama:
+Use the following command to re-write property titles and descriptions, generates summaries, ratings and reviews using Ollama:
 
 ```bash
 docker-compose exec django_cli python manage.py process_hotels
@@ -175,7 +175,8 @@ Stores Generated title and description. I have to add another column in the 'hot
 
 ### Summary Table (`HotelSummery`)
 
-Ollama model generates summery based on the property/hotel information and stored it in the 'summery' column. After running the command of generating information, it will add the generated data in new rows each time for each hotel
+Ollama model generates summery based on the property/hotel information and stores the generated information in the 'summery' column. After running the command of generating information, it will add the generated data in new rows each time for each hotel.
+
 | Field | Description |
 |--------------|-----------------------------------|
 | hotels | Foreign key to hotels primary ID |
@@ -185,6 +186,7 @@ Ollama model generates summery based on the property/hotel information and store
 ![Screenshot of the HotelSummery table](./screenshots/h3.png)
 
 ### Reviews Table (`HotelReview`)
+Ollama model generates ratings and reviews based on the property/hotel information and stores the generated information in the 'ratings' and 'reviews' column. After running the command of generating information, it will add the generated data in new rows each time for each hotel.
 
 | Field       | Description                      |
 | ----------- | -------------------------------- |
